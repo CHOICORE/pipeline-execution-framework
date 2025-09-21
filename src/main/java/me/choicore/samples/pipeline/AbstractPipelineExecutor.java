@@ -8,6 +8,7 @@ import me.choicore.samples.pipeline.exception.PipelineDefinitionException;
 import me.choicore.samples.pipeline.exception.PipelineExecutionException;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Accessors(fluent = true)
@@ -29,15 +30,15 @@ public abstract class AbstractPipelineExecutor<T> implements PipelineExecutor<T>
         if (pipelines == null || pipelines.isEmpty()) return List.of();
 
         List<Pipeline<T>> sorted = new ArrayList<>(pipelines);
+
         sorted.sort(Comparator.comparingInt(Pipeline::order));
 
-        // 2) 중복 수집 (order -> 구현 클래스들)
         Map<Integer, List<String>> duplicates = new LinkedHashMap<>();
-        int n = sorted.size();
-        for (int i = 0; i < n; ) {
+        int total = sorted.size();
+        for (int i = 0; i < total; ) {
             int o = sorted.get(i).order();
             int j = i + 1;
-            while (j < n && sorted.get(j).order() == o) j++;
+            while (j < total && sorted.get(j).order() == o) j++;
             int count = j - i;
             if (count > 1) {
                 List<String> classes = new ArrayList<>(count);
@@ -60,7 +61,14 @@ public abstract class AbstractPipelineExecutor<T> implements PipelineExecutor<T>
             throw new PipelineDefinitionException(msg.toString().trim());
         }
 
-        return Collections.unmodifiableList(sorted);
+        List<Pipeline<T>> unmodifiable = Collections.unmodifiableList(sorted);
+
+        log.debug("Initialized {} pipeline(s):\n{}", total, unmodifiable
+                .stream()
+                .map(p -> String.format("\t [%d/%d] %s", p.order(), total, p.getClass().getName()))
+                .collect(Collectors.joining("\n")));
+
+        return unmodifiable;
     }
 
     @SuppressWarnings("unchecked")
