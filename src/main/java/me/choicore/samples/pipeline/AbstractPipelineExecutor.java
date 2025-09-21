@@ -4,10 +4,10 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
-import me.choicore.samples.pipeline.exception.PipelineDefinitionException;
 import me.choicore.samples.pipeline.exception.PipelineExecutionException;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -29,46 +29,16 @@ public abstract class AbstractPipelineExecutor<T> implements PipelineExecutor<T>
     private List<Pipeline<T>> initialize(List<Pipeline<T>> pipelines) {
         if (pipelines == null || pipelines.isEmpty()) return List.of();
 
-        List<Pipeline<T>> sorted = new ArrayList<>(pipelines);
+        List<Pipeline<T>> sorted = pipelines.stream()
+                .sorted(Comparator.comparingInt(Pipeline::order))
+                .toList();
 
-        sorted.sort(Comparator.comparingInt(Pipeline::order));
-
-        Map<Integer, List<String>> duplicates = new LinkedHashMap<>();
-        int total = sorted.size();
-        for (int i = 0; i < total; ) {
-            int o = sorted.get(i).order();
-            int j = i + 1;
-            while (j < total && sorted.get(j).order() == o) j++;
-            int count = j - i;
-            if (count > 1) {
-                List<String> classes = new ArrayList<>(count);
-                for (int k = i; k < j; k++) {
-                    classes.add(sorted.get(k).getClass().getName());
-                }
-                duplicates.put(o, classes);
-            }
-            i = j;
-        }
-
-        if (!duplicates.isEmpty()) {
-            StringBuilder msg = new StringBuilder("Duplicate pipeline orders found:\n");
-            duplicates.forEach((o, clazz) -> msg
-                    .append("\t[")
-                    .append(o)
-                    .append("] -> ")
-                    .append(clazz)
-                    .append('\n'));
-            throw new PipelineDefinitionException(msg.toString().trim());
-        }
-
-        List<Pipeline<T>> unmodifiable = Collections.unmodifiableList(sorted);
-
-        log.debug("Initialized {} pipeline(s):\n{}", total, unmodifiable
+        log.debug("Initialized {} pipeline(s):\n{}", sorted.size(), sorted
                 .stream()
-                .map(p -> String.format("\t [%d/%d] %s", p.order(), total, p.getClass().getName()))
+                .map(p -> String.format("\t [%d/%d] %s", p.order(), sorted.size(), p.getClass().getName()))
                 .collect(Collectors.joining("\n")));
 
-        return unmodifiable;
+        return sorted;
     }
 
     @SuppressWarnings("unchecked")
