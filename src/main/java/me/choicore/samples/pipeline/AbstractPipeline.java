@@ -13,24 +13,24 @@ import java.util.stream.Collectors;
 @Slf4j
 @Accessors(fluent = true)
 @Getter(AccessLevel.PROTECTED)
-public abstract class AbstractPipelineExecutor<T> implements PipelineExecutor<T> {
-    private final List<Pipeline<T>> pipelines;
+public abstract class AbstractPipeline<T> implements Pipeline<T> {
+    private final List<Task<T>> tasks;
     private final TerminationStrategy terminationStrategy;
 
-    public AbstractPipelineExecutor(final List<Pipeline<T>> pipelines) {
-        this(pipelines, TerminationStrategy.COMPLETED);
+    public AbstractPipeline(final List<Task<T>> tasks) {
+        this(tasks, TerminationStrategy.COMPLETED);
     }
 
-    public AbstractPipelineExecutor(final List<Pipeline<T>> pipelines, final TerminationStrategy terminationStrategy) {
-        this.pipelines = initialize(pipelines);
+    public AbstractPipeline(final List<Task<T>> tasks, final TerminationStrategy terminationStrategy) {
+        this.tasks = initialize(tasks);
         this.terminationStrategy = terminationStrategy;
     }
 
-    private List<Pipeline<T>> initialize(List<Pipeline<T>> pipelines) {
-        if (pipelines == null || pipelines.isEmpty()) return List.of();
+    private List<Task<T>> initialize(List<Task<T>> tasks) {
+        if (tasks == null || tasks.isEmpty()) return List.of();
 
-        List<Pipeline<T>> sorted = pipelines.stream()
-                .sorted(Comparator.comparingInt(Pipeline::order))
+        List<Task<T>> sorted = tasks.stream()
+                .sorted(Comparator.comparingInt(Task::order))
                 .toList();
 
         log.debug("Initialized {} pipeline(s):\n{}", sorted.size(), sorted
@@ -43,21 +43,21 @@ public abstract class AbstractPipelineExecutor<T> implements PipelineExecutor<T>
 
     @SuppressWarnings("unchecked")
     public <S extends T> Execution<S> execute(final S initial) {
-        if (this.pipelines == null || this.pipelines.isEmpty()) {
+        if (this.tasks == null || this.tasks.isEmpty()) {
             log.info("No pipelines configured; returning initial.");
             return Execution.completed(initial);
         }
 
         S item = initial;
         int step = 1;
-        int total = pipelines.size();
+        int total = tasks.size();
 
         while (step <= total) {
-            final Pipeline<T> pipeline = pipelines.get(step - 1);
+            final Task<T> task = tasks.get(step - 1);
             final Flow flow;
 
             try {
-                flow = pipeline.run(item);
+                flow = task.run(item);
             } catch (Throwable t) {
                 throw new PipelineExecutionException(String.format("Pipeline step %d/%d failed", step, total), t);
             }
