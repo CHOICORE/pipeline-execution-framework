@@ -31,7 +31,7 @@ class AbstractPipelineTests {
         Task<Invoice> validator = (Invoice invoice) -> {
             int amount = invoice.amount();
             if (amount < 0) {
-                return new Flow.Abort("Amount is negative", null);
+                return new Flow.Abort<>("Amount is negative", null);
             }
 
             return new Flow.Next<>(invoice);

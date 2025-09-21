@@ -54,7 +54,7 @@ public abstract class AbstractPipeline<T> implements Pipeline<T> {
 
         while (step <= total) {
             final Task<T> task = tasks.get(step - 1);
-            final Flow flow;
+            final Flow<T> flow;
 
             try {
                 flow = task.run(item);
@@ -63,21 +63,20 @@ public abstract class AbstractPipeline<T> implements Pipeline<T> {
             }
 
             switch (flow) {
-                case Flow.Next<?> n -> {
+                case Flow.Next<T> n -> {
                     log.debug("Pipeline proceeding to step {}/{}", step, total);
                     item = (S) n.item();
                     step++;
                 }
-                case Flow.Abort a -> {
+                case Flow.Abort<T> a -> {
                     log.error("Aborting pipeline execution: {}/{}", step, total, a.cause());
                     return Execution.failed(item, a.reason(), a.cause());
                 }
-                case Flow.Stop<?> s -> {
+                case Flow.Stop<T> s -> {
                     log.info("Pipeline stopped at step {}/{}", step, total);
                     return Execution.stopped((S) s.item(), s.reason());
                 }
-
-                case Flow.Done<?> d -> {
+                case Flow.Done<T> d -> {
                     log.info("Pipeline done at step {}/{}", step, total);
                     return Execution.completed((S) d.item());
                 }
