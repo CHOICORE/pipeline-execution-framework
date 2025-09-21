@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: pipeline-execution-framework
+
+  docker:
+    compose:
+      enabled: false
+
+  threads:
+    virtual:
+      enabled: true
